@@ -33,12 +33,14 @@
     }
   });
 
-  /* 3. Init 3D Scene */
+  /* 3. Init 3D Scene (with 2D fallback) */
+  let use2DFallback = false;
   try {
     FarmScene.init();
     /* Force resize after a frame so the canvas is fully painted */
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   } catch (e) {
+    use2DFallback = true;
     console.warn('[FarmScene] init error:', e); if (e.message && e.message.includes('WebGL')) { const msg = document.createElement('div'); msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,0.95);padding:30px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.2);text-align:center;max-width:500px;z-index:1000'; msg.innerHTML = '<div style=font-size:48px>??</div><div style=font-size:20px;font-weight:700;color:#d32f2f;margin:16px>WebGL Not Available</div><div style=color:#666>Enable WebGL in your browser settings to view the 3D scene.</div>'; document.getElementById('sceneContainer').appendChild(msg); }
   }
 
