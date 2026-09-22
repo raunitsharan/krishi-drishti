@@ -204,7 +204,6 @@ const FarmScene = (() => {
     const mat = new THREE.MeshLambertMaterial({ color: C.groundGreen });
     const m   = new THREE.Mesh(geo, mat);
     m.rotation.x    = -Math.PI / 2;
-    m.position.y = -0.02;  /* Fix z-fighting with crops */
     m.receiveShadow = true;
     scene.add(m);
     obj.ground    = m;
@@ -304,7 +303,7 @@ const FarmScene = (() => {
     g.add(tass);
 
     /* ── Position ─────────────────────────────────────────── */
-    g.position.set(x, 0, z);
+    g.position.set(x, 0.02, z);  /* Raise crops above ground to prevent z-fighting */
     g.userData = {
       h, stemMat, leafMats, tMat,
       origColor: baseCol.clone(),
