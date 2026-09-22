@@ -20,6 +20,7 @@ const FarmScene = (() => {
   const cropMeshes  = [];
   const sensorNodes = [];
   const clouds      = [];
+  let sceneInitialized = false;  /* Track if WebGL context was created successfully */
 
   /* ΓöÇΓöÇ injection flags ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
   let floodActive   = false;
@@ -110,6 +111,7 @@ const FarmScene = (() => {
     window.addEventListener('resize', _onResize);
     _onResize();
 
+    sceneInitialized = true;  /* Scene initialized successfully */
     _loop();
   }
 
@@ -824,6 +826,7 @@ const FarmScene = (() => {
      PUBLIC API
   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
   function applyFlood(level) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     floodActive = level > 0;
     obj.groundMat.color.setHex(floodActive ? 0x1a4a1a : C.groundGreen);
     if (SKY) {
@@ -835,6 +838,7 @@ const FarmScene = (() => {
   }
 
   function applyDrought(severity) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     droughtActive = severity > 0;
     if (droughtActive) {
       const t = Math.min(severity/100, 1);
@@ -860,6 +864,7 @@ const FarmScene = (() => {
   }
 
   function applyDisease(severity) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     diseaseActive = severity > 0;
     const n = Math.floor(cropMeshes.length * (severity/100));
     cropMeshes.forEach((c, i) => {
@@ -871,12 +876,14 @@ const FarmScene = (() => {
   }
 
   function applyPest(density) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     pestActive = density > 0;
     if (pestActive) flashPestDetection();
     _badge(pestActive, 'pest');
   }
 
   function applyHeat(temp) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     heatActive = temp > 0;
     if (heatActive) {
       obj.sunLight.intensity = 2.9;
@@ -893,12 +900,14 @@ const FarmScene = (() => {
   }
 
   function setHarvestMode(active) {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     harvestActive = active;
     if (active) cropMeshes.forEach(c => c.userData.tMat.color.setHex(0xffd54f));
     _badge(active, 'harvest');
   }
 
   function resetScene() {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     floodActive = droughtActive = diseaseActive = pestActive = heatActive = harvestActive = false;
     obj.groundMat.color.setHex(C.groundGreen);
     cropMeshes.forEach(c => {
@@ -916,6 +925,7 @@ const FarmScene = (() => {
   }
 
   function flashPestDetection() {
+    if (!sceneInitialized) return;  /* Guard: scene not initialized */
     cropMeshes.slice(0, 12).forEach((c, i) => {
       setTimeout(() => {
         c.userData.leafMats.forEach(m => m.color.setHex(C.pestOrange));
