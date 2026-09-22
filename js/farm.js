@@ -204,6 +204,7 @@ const FarmScene = (() => {
     const mat = new THREE.MeshLambertMaterial({ color: C.groundGreen });
     const m   = new THREE.Mesh(geo, mat);
     m.rotation.x    = -Math.PI / 2;
+    m.position.y = -0.02;  /* Fix z-fighting with crops */
     m.receiveShadow = true;
     scene.add(m);
     obj.ground    = m;
