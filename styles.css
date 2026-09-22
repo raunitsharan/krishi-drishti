@@ -391,16 +391,20 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--sky);
+  background: #87ceeb;
+  /* Must fill the grid cell */
+  min-width: 0;
+  min-height: 0;
 }
 
 /* ── 3D SCENE ────────────────────────────────────────────────── */
 .scene-container {
-  flex: 1;
+  /* Take ALL remaining vertical space after the AI panel */
+  flex: 1 1 0;
   position: relative;
   overflow: hidden;
-  min-height: 0;
-  background: linear-gradient(180deg, #87ceeb 0%, #b0e0ff 45%, #d4f1d4 75%, #8bc34a 100%);
+  min-height: 160px;   /* guarantee the canvas is never zero-height */
+  background: #87ceeb;
 }
 
 #farmCanvas {
