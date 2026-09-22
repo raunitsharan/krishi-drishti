@@ -19,9 +19,9 @@ const Dashboard = (() => {
 
   /* ── Colour helpers ──────────────────────────────────────── */
   const COL = {
-    green:  '#22c55e', cyan:   '#06b6d4', orange: '#f97316',
-    red:    '#ef4444', blue:   '#3b82f6', yellow: '#eab308',
-    purple: '#a855f7', lime:   '#84cc16', muted:  '#4a7a99',
+    green:  '#2e7d32', cyan:   '#0097a7', orange: '#e65100',
+    red:    '#c62828', blue:   '#1565c0', yellow: '#f57f17',
+    purple: '#6a1b9a', lime:   '#558b2f', muted:  '#5a7d5c',
   };
 
   /* ── $ helper ────────────────────────────────────────────── */
@@ -72,7 +72,7 @@ const Dashboard = (() => {
           x: { display: false },
           y: {
             display: true,
-            grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+            grid: { color: 'rgba(46,125,50,0.08)', drawBorder: false },
             ticks: { color: COL.muted, font: { size: 9 }, maxTicksLimit: 4 },
             border: { display: false },
           }

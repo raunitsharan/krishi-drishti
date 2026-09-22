@@ -1,65 +1,59 @@
 /* ═══════════════════════════════════════════════════════════════
-   KRISHI DRISHTI — Main Orchestrator
-   Boot sequence: Dashboard → SensorEngine → AIEngine →
-   FarmScene → ProblemInjector → start loops.
+   KRISHI DRISHTI — Main Orchestrator v2
+   Light theme + live 3D injection responses
 ═══════════════════════════════════════════════════════════════ */
 
 (function boot() {
 
-  /* ── 1. Init Dashboard (charts + clock) ─────────────────── */
   Dashboard.init();
 
-  /* ── 2. Wire sensor → dashboard + AI ───────────────────── */
   SensorEngine.subscribe((state, simHour) => {
-    /* Update left panel */
     Dashboard.updateSensors(state, simHour);
 
-    /* Run AI inference */
     const injections = SensorEngine.getInjections();
     const output     = AIEngine.infer(state, simHour, injections);
 
-    /* Update AI output cards + recommendation */
     Dashboard.updateAI(output);
 
-    /* Process alerts */
-    const sensorAlerts = SensorEngine.getAlerts();
-    AlertSystem.processSensorAlerts(sensorAlerts);
+    AlertSystem.processSensorAlerts(SensorEngine.getAlerts());
     AlertSystem.processAIAlerts(output);
 
-    /* Update 3D scene based on AI output */
+    /* ── Live 3D scene reactions to AI output ─────────── */
     if (typeof FarmScene !== 'undefined') {
+      /* Flood — visually raise water when LSTM says >55% */
       FarmScene.applyFlood(output.flood.prob > 55 ? output.flood.prob / 100 : 0);
+
+      /* Harvest sparkle when AI says ready */
+      if (output.harvest.days <= 5 && !injections.disease.active && !injections.pest.active) {
+        FarmScene.setHarvestMode(true);
+      } else if (!injections.drought.active && !injections.disease.active) {
+        FarmScene.setHarvestMode(false);
+      }
     }
   });
 
-  /* ── 3. Start 3D Scene ──────────────────────────────────── */
-  try {
-    FarmScene.init();
-  } catch (e) {
-    console.warn('[FarmScene] Init error:', e);
-  }
+  /* ── Init 3D Scene ──────────────────────────────────── */
+  try { FarmScene.init(); } catch(e) { console.warn('[FarmScene]', e); }
 
-  /* ── 4. Init Problem Injector ───────────────────────────── */
+  /* ── Init Problem Injector ──────────────────────────── */
   ProblemInjector.init();
 
-  /* ── 5. Start sensor engine (drives everything) ─────────── */
+  /* ── Start sensor loop ──────────────────────────────── */
   SensorEngine.start();
 
-  /* ── 6. Boot toast ──────────────────────────────────────── */
+  /* ── Boot toast ─────────────────────────────────────── */
   setTimeout(() => {
-    AlertSystem.toast('ok', 'Krishi Drishti Online',
-      'Edge-AI system initialised. RPi 4B + ESP32 sensors active. LoRaWAN connected.', 6000);
-    AlertSystem.logAlert('info', 'System boot complete — all subsystems nominal', 'fa-power-off');
-  }, 800);
+    AlertSystem.toast('ok', '🌿 Krishi Drishti Online',
+      'Edge-AI active · RPi 4B + ESP32 · LoRaWAN connected · Daytime monitoring started.', 6000);
+    AlertSystem.logAlert('info', 'System boot complete — light mode, all 3D animations active', 'fa-power-off');
+  }, 900);
 
-  /* ── 7. Simulate periodic inference log message ─────────── */
+  /* ── Inference counter ──────────────────────────────── */
   setInterval(() => {
-    const ic = AIEngine.getInferenceCount();
     const el = document.getElementById('inferenceCount');
-    if (el) el.textContent = ic.toLocaleString();
+    if (el) el.textContent = AIEngine.getInferenceCount().toLocaleString();
   }, 500);
 
-  console.log('%c🌿 Krishi Drishti — SIH 2026 PS-26180 | Edge-AI Smart Farming', 'color:#22c55e;font-size:14px;font-weight:bold');
-  console.log('%cTeam: Raunit, Nainsi, Nikhil, Aditya, Satwik, Sunny', 'color:#06b6d4;font-size:12px');
-
+  console.log('%c🌿 Krishi Drishti v2 — Light Theme · Live 3D Animations', 'color:#2e7d32;font-size:14px;font-weight:bold');
+  console.log('%cSIH 2026 · PS-26180 · Team: Raunit, Nainsi, Nikhil, Aditya, Satwik, Sunny', 'color:#1565c0;font-size:12px');
 })();
