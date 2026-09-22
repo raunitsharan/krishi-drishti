@@ -43,6 +43,12 @@
   /* 4. Init Problem Injector (sliders + buttons) */
   ProblemInjector.init();
 
+  /* 5. Open bottom AI panel by default */
+  setTimeout(() => {
+    const bp = document.getElementById('panelAI');
+    if (bp) bp.classList.remove('hidden');
+  }, 100);
+
   /* 5. Start sensor engine (drives everything) */
   SensorEngine.start();
 

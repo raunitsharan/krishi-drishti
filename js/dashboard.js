@@ -1,121 +1,94 @@
 /* ═══════════════════════════════════════════════════════════════
-   KRISHI DRISHTI — Live Dashboard UI
-   Updates: sensor cards, AI output cards, Chart.js sparklines,
-   device health, connectivity panel, live clock, solar %.
+   KRISHI DRISHTI — Live Dashboard UI v4
+   Matches new full-page layout element IDs.
 ═══════════════════════════════════════════════════════════════ */
 
 const Dashboard = (() => {
 
-  /* ── Chart.js instances ──────────────────────────────────── */
   let chartMoisture, chartTemp, chartRisk;
-  const HISTORY_LEN = 60;
+  const HIST = 60;
 
   const history = {
-    moisture: Array(HISTORY_LEN).fill(55),
-    temp:     Array(HISTORY_LEN).fill(29),
-    risk:     Array(HISTORY_LEN).fill(0),
-    labels:   Array(HISTORY_LEN).fill(''),
+    moisture: Array(HIST).fill(55),
+    temp:     Array(HIST).fill(29),
+    risk:     Array(HIST).fill(0),
+    labels:   Array(HIST).fill(''),
   };
 
-  /* ── Colour helpers ──────────────────────────────────────── */
   const COL = {
     green:  '#2e7d32', cyan:   '#0097a7', orange: '#e65100',
     red:    '#c62828', blue:   '#1565c0', yellow: '#f57f17',
-    purple: '#6a1b9a', lime:   '#558b2f', muted:  '#5a7d5c',
+    muted:  '#6a8c6b',
   };
 
-  /* ── $ helper ────────────────────────────────────────────── */
   const $ = id => document.getElementById(id);
 
-  /* ══════════════════════════════════════════════════════════
-     INIT — build Chart.js sparklines
-  ══════════════════════════════════════════════════════════ */
+  /* ── Init ─────────────────────────────────────────────── */
   function init() {
-    _buildClockTick();
+    _clock();
     _buildCharts();
   }
 
-  /* ── Clock ───────────────────────────────────────────────── */
-  function _buildClockTick() {
-    function tick() {
-      const now = new Date();
-      const el  = $('liveTime');
-      if (el) el.textContent = now.toLocaleTimeString('en-IN', { hour12: false });
-    }
+  function _clock() {
+    const tick = () => {
+      const el = $('liveTime');
+      if (el) el.textContent = new Date().toLocaleTimeString('en-IN',{hour12:false});
+    };
     tick();
     setInterval(tick, 1000);
   }
 
-  /* ── Sparkline charts ────────────────────────────────────── */
   function _buildCharts() {
-    const baseOpts = (label, color) => ({
+    const base = (label, color) => ({
       type: 'line',
-      data: {
-        labels: history.labels,
-        datasets: [{
-          label,
-          data: [],
-          borderColor: color,
-          backgroundColor: color + '18',
-          borderWidth: 1.5,
-          pointRadius: 0,
-          tension: 0.4,
-          fill: true,
-        }]
-      },
+      data: { labels: [], datasets: [{ label, data: [], borderColor: color,
+        backgroundColor: color+'18', borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: true }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         animation: { duration: 300 },
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: { display: false },
-          y: {
-            display: true,
-            grid: { color: 'rgba(46,125,50,0.08)', drawBorder: false },
+          y: { display: true,
+            grid:  { color:'rgba(46,125,50,0.07)', drawBorder: false },
             ticks: { color: COL.muted, font: { size: 9 }, maxTicksLimit: 4 },
-            border: { display: false },
+            border:{ display: false },
           }
         }
       }
     });
 
-    const ctxM = $('chartMoisture');
-    const ctxT = $('chartTemp');
-    const ctxR = $('chartRisk');
-
-    if (ctxM) chartMoisture = new Chart(ctxM, baseOpts('Moisture %',   COL.cyan));
-    if (ctxT) chartTemp     = new Chart(ctxT, baseOpts('Air Temp °C',  COL.orange));
-    if (ctxR) chartRisk     = new Chart(ctxR, baseOpts('Risk Score',   COL.red));
+    const cm = $('chartMoisture'), ct = $('chartTemp'), cr = $('chartRisk');
+    if (cm) chartMoisture = new Chart(cm, base('Moisture %', COL.cyan));
+    if (ct) chartTemp     = new Chart(ct, base('Air Temp °C', COL.orange));
+    if (cr) chartRisk     = new Chart(cr, base('Risk Score',  COL.red));
   }
 
-  /* ══════════════════════════════════════════════════════════
-     UPDATE SENSORS — called on every sensor tick
-  ══════════════════════════════════════════════════════════ */
+  /* ── Update sensors ───────────────────────────────────── */
   function updateSensors(state, simHour) {
     const S = SensorEngine;
 
-    /* helper: set value + bar + status */
-    function set(key, rawVal, decimals = 1) {
+    /* helper — new HTML uses sc-badge / sc-bar / sc-* classes */
+    function set(key, rawVal, decimals) {
       const valEl  = $(`val-${key}`);
       const barEl  = $(`bar-${key}`);
       const stEl   = $(`st-${key}`);
       const cardEl = $(`sc-${key}`);
-      if (!valEl) return;
 
-      const display = typeof rawVal === 'number' ? rawVal.toFixed(decimals) : rawVal;
-      valEl.textContent = display;
+      if (valEl) valEl.textContent = typeof rawVal === 'number' ? rawVal.toFixed(decimals ?? 1) : rawVal;
 
       if (barEl) {
-        const pct    = S.getBarPct(key, rawVal);
+        const pct = S.getBarPct(key, rawVal);
         barEl.style.width = pct + '%';
-        barEl.className   = 'sensor-bar' + (pct > 80 ? ' danger' : pct > 65 ? ' warn' : '');
+        barEl.className   = 'sc-bar' + (pct > 80 ? ' danger' : pct > 65 ? ' warn' : '');
       }
 
       if (stEl || cardEl) {
         const status = S.getSensorStatus(key, rawVal);
-        if (stEl) { stEl.textContent = status.label; stEl.className = `sensor-status ${status.css}`; }
-        if (cardEl) { cardEl.className = `sensor-card ${status.css === 'ok' ? '' : status.css}`; }
+        if (stEl) { stEl.textContent = status.label; stEl.className = `sc-badge ${status.css}`; }
+        if (cardEl) {
+          cardEl.className = 'sensor-card' + (status.css !== 'ok' ? ` ${status.css}` : '');
+        }
       }
     }
 
@@ -129,209 +102,118 @@ const Dashboard = (() => {
     set('wind',      state.wind,      1);
     set('wlevel',    state.waterLevel,2);
 
-    /* NPK — no bar, custom display */
-    const vn = $('val-n'), vp = $('val-p'), vk = $('val-k');
+    /* NPK */
+    const vn=$('val-n'), vp=$('val-p'), vk=$('val-k');
     if (vn) vn.textContent = Math.round(state.n);
     if (vp) vp.textContent = Math.round(state.p);
     if (vk) vk.textContent = Math.round(state.k);
 
     /* Device health */
-    const dSolar   = $('dh-solar');
-    const dBattery = $('dh-battery');
-    const dCpu     = $('dh-cpu');
-    const dRam     = $('dh-ram');
-    if (dSolar)   dSolar.textContent   = state.solar.toFixed(1) + 'W';
-    if (dBattery) dBattery.textContent = Math.round(state.battery) + '%';
-    if (dCpu)     dCpu.textContent     = Math.round(state.cpu) + '%';
-    if (dRam)     dRam.textContent     = Math.round(state.ram) + '%';
+    const ds=$('dh-solar'),db=$('dh-battery'),dc=$('dh-cpu'),dr=$('dh-ram');
+    if (ds) ds.textContent = state.solar.toFixed(1)+'W';
+    if (db) db.textContent = Math.round(state.battery)+'%';
+    if (dc) dc.textContent = Math.round(state.cpu)+'%';
+    if (dr) dr.textContent = Math.round(state.ram)+'%';
 
-    /* Topbar solar */
-    const solarPct = $('solarPct');
-    if (solarPct) solarPct.textContent = Math.round(state.battery) + '%';
+    /* Topbar battery */
+    const sp = $('solarPct');
+    if (sp) sp.textContent = Math.round(state.battery)+'%';
 
-    /* History push */
-    const label = new Date().toLocaleTimeString('en-IN', { hour12: false });
-    _pushHistory('moisture', state.moisture, label);
-    _pushHistory('temp',     state.airTemp,  label);
-
-    /* Connectivity RSSI shimmer */
-    _updateConnectivity(state);
+    /* Charts */
+    const lbl = new Date().toLocaleTimeString('en-IN',{hour12:false});
+    _push('moisture', state.moisture, lbl);
+    _push('temp',     state.airTemp,  lbl);
+    _updateConn(state);
   }
 
-  /* ══════════════════════════════════════════════════════════
-     UPDATE AI OUTPUTS — called on every inference tick
-  ══════════════════════════════════════════════════════════ */
+  /* ── Update AI cards ──────────────────────────────────── */
   function updateAI(output) {
-    /* inference counter */
     const ic = $('inferenceCount');
     if (ic) ic.textContent = output.inferenceCount.toLocaleString();
 
-    /* helper */
-    function setCard(key, label, sub, conf, isAlert) {
-      const labelEl = $(`aov-${key}`);
-      const subEl   = $(`aos-${key}`);
-      const confEl  = $(`acf-${key}`);
-      const cardEl  = $(`aoc-${key}`);
-      if (labelEl) labelEl.textContent = label;
-      if (subEl)   subEl.textContent   = sub;
-      if (confEl)  confEl.style.width  = conf + '%';
-      if (cardEl) {
-        cardEl.classList.toggle('alert-active', !!isAlert);
-      }
+    function setCard(key, label, sub, conf, alert) {
+      const lEl = $(`aov-${key}`);
+      const sEl = $(`aos-${key}`);
+      const bEl = $(`acf-${key}`);
+      const cEl = $(`aoc-${key}`);
+      if (lEl) lEl.textContent = label;
+      if (sEl) sEl.textContent = sub;
+      if (bEl) bEl.style.width = conf + '%';
+      if (cEl) cEl.classList.toggle('alert-active', !!alert);
     }
 
     const o = output;
+    setCard('health',    o.health.label,    `Score: ${o.health.value}/100 · ${o.health.conf}%`, o.health.conf,     o.health.alert);
+    setCard('disease',   o.disease.label,   `MobileNetV3 · ${o.disease.conf}%`,                 o.disease.conf,    o.disease.alert);
+    setCard('pest',      o.pest.label,       `YOLOv8-nano · ${o.pest.conf}%`,                    o.pest.conf,       o.pest.alert);
+    setCard('irrigation',o.irrigation.label,`Rule-based · ${o.irrigation.conf}%`,               o.irrigation.conf, o.irrigation.alert);
+    setCard('flood',     o.flood.label,     `LSTM · ${o.flood.prob}% prob`,                      o.flood.prob,      o.flood.alert);
+    setCard('drought',   o.drought.label,   `XGBoost · ${o.drought.prob}% risk`,                o.drought.prob,    o.drought.alert);
+    setCard('nutrient',  o.nutrient.label,  `Hybrid CNN · ${o.nutrient.conf}%`,                  o.nutrient.conf,   o.nutrient.alert);
+    setCard('harvest',   o.harvest.label,   `Regression · ${o.harvest.conf}%`,                   o.harvest.conf,    o.harvest.alert);
 
-    setCard('health',
-      o.health.label,
-      `Score: ${o.health.value}/100 · Conf: ${o.health.conf}%`,
-      o.health.conf,
-      o.health.alert
-    );
-
-    setCard('disease',
-      o.disease.label,
-      `MobileNetV3 · ${o.disease.conf}% conf`,
-      o.disease.conf,
-      o.disease.alert
-    );
-
-    setCard('pest',
-      o.pest.label,
-      `YOLOv8-nano · ${o.pest.conf}% conf`,
-      o.pest.conf,
-      o.pest.alert
-    );
-
-    setCard('irrigation',
-      o.irrigation.label,
-      `Rule-based + LSTM · ${o.irrigation.conf}%`,
-      o.irrigation.conf,
-      o.irrigation.alert
-    );
-
-    setCard('flood',
-      o.flood.label,
-      `LSTM · ${o.flood.prob}% probability`,
-      o.flood.prob,
-      o.flood.alert
-    );
-
-    setCard('drought',
-      o.drought.label,
-      `XGBoost · ${o.drought.prob}% risk`,
-      o.drought.prob,
-      o.drought.alert
-    );
-
-    setCard('nutrient',
-      o.nutrient.label,
-      `Hybrid CNN · ${o.nutrient.conf}% conf`,
-      o.nutrient.conf,
-      o.nutrient.alert
-    );
-
-    setCard('harvest',
-      o.harvest.label,
-      `Regression · ${o.harvest.conf}% conf`,
-      o.harvest.conf,
-      o.harvest.alert
-    );
-
-    /* Risk score = max of flood/drought probs + disease/pest boost */
+    /* Risk sparkline */
     const riskScore = Math.min(99, Math.round(
       Math.max(o.flood.prob, o.drought.prob) * 0.6 +
       (o.disease.alert ? 20 : 0) + (o.pest.alert ? 15 : 0)
     ));
-    _pushHistory('risk', riskScore, '');
+    _push('risk', riskScore, '');
 
     /* Recommendation strip */
-    const recEl  = $('recText');
-    const stripEl= $('recommendationStrip');
-    if (recEl)  recEl.textContent = o.recommendation;
-    if (stripEl) {
-      stripEl.className = 'recommendation-strip ' + (o.recClass || '');
-    }
+    const rEl  = $('recText');
+    const strip= $('recommendationStrip');
+    if (rEl)  rEl.textContent = o.recommendation;
+    if (strip) strip.className = 'rec-bar' + (o.recClass ? ' ' + o.recClass : '');
 
-    /* Detection overlay for high-confidence pest/disease */
-    if (o.pest.alert && o.pest.conf > 75) {
-      _showDetectionOverlay('pest', o.pest.label, o.pest.conf, 'YOLOv8-nano');
-    } else if (o.disease.alert && o.disease.conf > 75) {
-      _showDetectionOverlay('disease', o.disease.label, o.disease.conf, 'MobileNetV3');
-    }
+    /* Detection overlay */
+    if (o.pest.alert && o.pest.conf > 75) _showDetection('pest', o.pest.label, o.pest.conf, 'YOLOv8-nano');
+    else if (o.disease.alert && o.disease.conf > 75) _showDetection('disease', o.disease.label, o.disease.conf, 'MobileNetV3');
   }
 
-  /* ══════════════════════════════════════════════════════════
-     DETECTION OVERLAY
-  ══════════════════════════════════════════════════════════ */
-  function _showDetectionOverlay(type, label, conf, model) {
-    const ov    = $('detectionOverlay');
-    const icon  = $('detIcon');
-    const title = $('detTitle');
-    const confEl= $('detConf');
-    const modEl = $('detModel');
+  function _showDetection(type, label, conf, model) {
+    const ov = $('detectionOverlay');
+    const ic = $('detIcon');
+    const ti = $('detTitle');
+    const co = $('detConf');
+    const mo = $('detModel');
     if (!ov) return;
-
-    icon.innerHTML  = type === 'pest'
-      ? '<i class="fa-solid fa-bug"></i>'
-      : '<i class="fa-solid fa-virus"></i>';
-    title.textContent = label + ' Detected';
-    confEl.textContent= `Confidence: ${conf}%`;
-    modEl.textContent = `Model: ${model}`;
-    ov.style.display  = 'flex';
+    if (ic) ic.innerHTML = type === 'pest' ? '<i class="fa-solid fa-bug"></i>' : '<i class="fa-solid fa-virus"></i>';
+    if (ti) ti.textContent = label + ' Detected';
+    if (co) co.textContent = `Confidence: ${conf}%`;
+    if (mo) mo.textContent = `Model: ${model}`;
+    ov.style.display = 'flex';
   }
 
-  /* ══════════════════════════════════════════════════════════
-     CONNECTIVITY PANEL shimmer
-  ══════════════════════════════════════════════════════════ */
-  function _updateConnectivity(state) {
-    /* simulate RSSI variation */
-    const loraRssi = -87 + Math.round(gaussian(0, 3));
-    const gsmRssi  = -62 + Math.round(gaussian(0, 2));
-    const crLora = $('cr-lora');
-    const crGsm  = $('cr-gsm');
-    if (crLora) crLora.textContent = `${loraRssi} dBm`;
-    if (crGsm)  crGsm.textContent  = `4G · ${gsmRssi} dBm`;
-
-    /* edge inference no-cloud tag */
-    const crEdge = $('cr-edge');
-    if (crEdge) crEdge.textContent = `No Cloud · ${state.cpu.toFixed(0)}% CPU`;
+  function _updateConn(state) {
+    const lr = $('cr-lora'), gr = $('cr-gsm'), er = $('cr-edge');
+    if (lr) lr.textContent = `${(-87 + Math.round(_g(0,3)))} dBm`;
+    if (gr) gr.textContent = `4G · ${(-62 + Math.round(_g(0,2)))} dBm`;
+    if (er) er.textContent = `No Cloud · ${state.cpu.toFixed(0)}% CPU`;
   }
 
-  /* ══════════════════════════════════════════════════════════
-     HISTORY PUSH + CHART UPDATE
-  ══════════════════════════════════════════════════════════ */
-  function _pushHistory(key, value, label) {
+  function _push(key, value, label) {
     history[key].push(value);
-    if (history[key].length > HISTORY_LEN) history[key].shift();
-    if (label) { history.labels.push(label); if (history.labels.length > HISTORY_LEN) history.labels.shift(); }
-
-    const chartMap = { moisture: chartMoisture, temp: chartTemp, risk: chartRisk };
-    const chart    = chartMap[key];
-    if (!chart) return;
-
-    chart.data.datasets[0].data   = [...history[key]];
-    chart.data.labels             = [...history.labels];
-    chart.update('none');
+    if (history[key].length > HIST) history[key].shift();
+    if (label) { history.labels.push(label); if (history.labels.length > HIST) history.labels.shift(); }
+    const m = { moisture: chartMoisture, temp: chartTemp, risk: chartRisk };
+    const c = m[key];
+    if (!c) return;
+    c.data.datasets[0].data = [...history[key]];
+    c.data.labels           = [...history.labels];
+    c.update('none');
   }
 
-  /* ══════════════════════════════════════════════════════════
-     SYSTEM STATUS BANNER
-  ══════════════════════════════════════════════════════════ */
+  function _g(m=0,s=1) {
+    let u=0,v=0;
+    while(!u) u=Math.random(); while(!v) v=Math.random();
+    return m + s * Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+  }
+
   function setSystemStatus(level, text) {
-    const dot  = document.querySelector('.pulse-dot');
-    const st   = $('statusText');
-    if (!dot || !st) return;
-    dot.className = `pulse-dot ${level}`;
-    st.textContent = text;
-  }
-
-  /* ── gaussian (local copy for connectivity shimmer) ──────── */
-  function gaussian(mean = 0, std = 1) {
-    let u = 0, v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
-    return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    const dot = document.querySelector('.pulse-dot');
+    const st  = $('statusText');
+    if (dot) dot.className = `pulse-dot ${level}`;
+    if (st)  st.textContent = text;
   }
 
   return { init, updateSensors, updateAI, setSystemStatus };

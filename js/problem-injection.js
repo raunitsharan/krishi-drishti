@@ -37,11 +37,11 @@ const ProblemInjector = (() => {
      PANEL TOGGLE
   ══════════════════════════════════════════════════════════ */
   function toggleInjectionPanel() {
-    const bar  = $('injectionBar');
-    const grid = document.querySelector('.app-grid');
+    const bar = $('injectionBar');
     if (!bar) return;
     bar.classList.toggle('open');
-    if (grid) grid.classList.toggle('panel-expanded', bar.classList.contains('open'));
+    const fab = document.querySelector('.inj-fab-btn');
+    if (fab) fab.style.opacity = bar.classList.contains('open') ? '0' : '1';
   }
 
   /* ══════════════════════════════════════════════════════════

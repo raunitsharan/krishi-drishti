@@ -1,659 +1,617 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Krishi Drishti — AI Smart Farming Assistant | SIH 2026</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- Three.js CDN -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Krishi Drishti — AI Smart Farming | SIH 2026</title>
+  <link rel="stylesheet" href="styles.css"/>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════════════
-       HEADER / NAV BAR
-  ═══════════════════════════════════════════════ -->
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="logo-wrap">
-        <div class="logo-icon"><i class="fa-solid fa-seedling"></i></div>
-        <div class="logo-text">
-          <span class="logo-main">Krishi Drishti</span>
-          <span class="logo-sub">AI Smart Farming Assistant · SIH 2026 · PS-26180</span>
-        </div>
-      </div>
+<!-- ══════════════════════════════════════════════════════
+     FULL-PAGE 3D CANVAS (background layer)
+══════════════════════════════════════════════════════ -->
+<div id="sceneContainer">
+  <canvas id="farmCanvas"></canvas>
+
+  <!-- HUD: top-left zone tag -->
+  <div class="hud-zone-tag">
+    <i class="fa-solid fa-location-dot"></i>
+    <span>Zone A — Main Field &nbsp;·&nbsp; 2.4 ha &nbsp;·&nbsp; 6 nodes</span>
+  </div>
+
+  <!-- HUD: camera hint -->
+  <div class="hud-cam-hint">
+    <i class="fa-solid fa-arrows-rotate"></i> Drag &nbsp;·&nbsp;
+    <i class="fa-solid fa-magnifying-glass-plus"></i> Scroll
+  </div>
+
+  <!-- Detection overlay badge (shows on pest/disease detect) -->
+  <div class="detection-overlay" id="detectionOverlay" style="display:none">
+    <div class="det-icon" id="detIcon"><i class="fa-solid fa-bug"></i></div>
+    <div class="det-content">
+      <div class="det-title" id="detTitle">Pest Detected</div>
+      <div class="det-conf"  id="detConf">Confidence: 93%</div>
+      <div class="det-model" id="detModel">Model: YOLOv8-nano</div>
     </div>
-    <div class="topbar-center">
-      <div class="system-status" id="systemStatus">
-        <span class="pulse-dot green"></span>
-        <span id="statusText">SYSTEM ONLINE · EDGE-AI ACTIVE</span>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="top-kpi" id="topKpiBar">
-        <div class="kpi-item">
-          <i class="fa-solid fa-wifi"></i>
-          <span id="connMode">LoRaWAN</span>
-        </div>
-        <div class="kpi-item">
-          <i class="fa-solid fa-solar-panel"></i>
-          <span id="solarPct">87%</span>
-        </div>
-        <div class="kpi-item">
-          <i class="fa-solid fa-clock"></i>
-          <span id="liveTime">--:--:--</span>
-        </div>
-        <button class="btn-emergency" id="emergencyBtn" onclick="triggerEmergency()">
-          <i class="fa-solid fa-triangle-exclamation"></i> EMERGENCY
-        </button>
-      </div>
-    </div>
-  </header>
+    <div class="det-close" onclick="closeDetection()"><i class="fa-solid fa-xmark"></i></div>
+  </div>
+</div>
 
-  <!-- ═══════════════════════════════════════════════
-       MAIN LAYOUT GRID
-  ═══════════════════════════════════════════════ -->
-  <main class="app-grid">
-
-    <!-- ── LEFT PANEL: Sensor Live Readings ──────── -->
-    <aside class="panel panel-left" id="leftPanel">
-      <div class="panel-header">
-        <i class="fa-solid fa-microchip"></i>
-        <span>Live Sensor Array</span>
-        <span class="badge badge-live">LIVE</span>
-      </div>
-
-      <!-- Soil Sensors -->
-      <div class="sensor-section">
-        <div class="sensor-section-title"><i class="fa-solid fa-mound"></i> Soil Parameters</div>
-
-        <div class="sensor-card" id="sc-moisture">
-          <div class="sensor-label"><i class="fa-solid fa-droplet"></i> Soil Moisture</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-moisture">--</span>
-            <span class="sensor-unit">%</span>
-            <span class="sensor-status ok" id="st-moisture">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-moisture"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-npk">
-          <div class="sensor-label"><i class="fa-solid fa-flask"></i> NPK Index</div>
-          <div class="npk-row">
-            <div class="npk-block">
-              <span class="npk-letter n">N</span>
-              <span class="npk-val" id="val-n">--</span>
-              <span class="npk-unit">mg/kg</span>
-            </div>
-            <div class="npk-block">
-              <span class="npk-letter p">P</span>
-              <span class="npk-val" id="val-p">--</span>
-              <span class="npk-unit">mg/kg</span>
-            </div>
-            <div class="npk-block">
-              <span class="npk-letter k">K</span>
-              <span class="npk-val" id="val-k">--</span>
-              <span class="npk-unit">mg/kg</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="sensor-card" id="sc-ph">
-          <div class="sensor-label"><i class="fa-solid fa-vial"></i> Soil pH</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-ph">--</span>
-            <span class="sensor-unit">pH</span>
-            <span class="sensor-status ok" id="st-ph">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-ph"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-temp">
-          <div class="sensor-label"><i class="fa-solid fa-temperature-half"></i> Soil Temp</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-stemp">--</span>
-            <span class="sensor-unit">°C</span>
-            <span class="sensor-status ok" id="st-stemp">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-stemp"></div></div>
-        </div>
-      </div>
-
-      <!-- Atmospheric Sensors -->
-      <div class="sensor-section">
-        <div class="sensor-section-title"><i class="fa-solid fa-cloud-sun"></i> Atmospheric</div>
-
-        <div class="sensor-card" id="sc-atemp">
-          <div class="sensor-label"><i class="fa-solid fa-thermometer"></i> Air Temperature</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-atemp">--</span>
-            <span class="sensor-unit">°C</span>
-            <span class="sensor-status ok" id="st-atemp">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-atemp"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-humidity">
-          <div class="sensor-label"><i class="fa-solid fa-water"></i> Humidity</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-humidity">--</span>
-            <span class="sensor-unit">%RH</span>
-            <span class="sensor-status ok" id="st-humidity">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-humidity"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-rain">
-          <div class="sensor-label"><i class="fa-solid fa-cloud-rain"></i> Rainfall</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-rain">--</span>
-            <span class="sensor-unit">mm/h</span>
-            <span class="sensor-status ok" id="st-rain">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-rain"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-light">
-          <div class="sensor-label"><i class="fa-solid fa-sun"></i> Light Intensity</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-light">--</span>
-            <span class="sensor-unit">klux</span>
-            <span class="sensor-status ok" id="st-light">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-light"></div></div>
-        </div>
-
-        <div class="sensor-card" id="sc-wind">
-          <div class="sensor-label"><i class="fa-solid fa-wind"></i> Wind Speed</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-wind">--</span>
-            <span class="sensor-unit">km/h</span>
-            <span class="sensor-status ok" id="st-wind">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-wind"></div></div>
-        </div>
-      </div>
-
-      <!-- Water Level -->
-      <div class="sensor-section">
-        <div class="sensor-section-title"><i class="fa-solid fa-water"></i> Water / Hydrology</div>
-        <div class="sensor-card" id="sc-wlevel">
-          <div class="sensor-label"><i class="fa-solid fa-ruler-vertical"></i> Canal Water Level</div>
-          <div class="sensor-value-row">
-            <span class="sensor-value" id="val-wlevel">--</span>
-            <span class="sensor-unit">m</span>
-            <span class="sensor-status ok" id="st-wlevel">OK</span>
-          </div>
-          <div class="sensor-bar-wrap"><div class="sensor-bar" id="bar-wlevel"></div></div>
-        </div>
-      </div>
-
-      <!-- Device Health -->
-      <div class="sensor-section">
-        <div class="sensor-section-title"><i class="fa-solid fa-battery-full"></i> Device Health</div>
-        <div class="device-health-grid">
-          <div class="dh-item">
-            <i class="fa-solid fa-solar-panel"></i>
-            <span class="dh-label">Solar</span>
-            <span class="dh-val" id="dh-solar">--W</span>
-          </div>
-          <div class="dh-item">
-            <i class="fa-solid fa-battery-three-quarters"></i>
-            <span class="dh-label">Battery</span>
-            <span class="dh-val" id="dh-battery">--%</span>
-          </div>
-          <div class="dh-item">
-            <i class="fa-solid fa-microchip"></i>
-            <span class="dh-label">CPU</span>
-            <span class="dh-val" id="dh-cpu">--%</span>
-          </div>
-          <div class="dh-item">
-            <i class="fa-solid fa-memory"></i>
-            <span class="dh-label">RAM</span>
-            <span class="dh-val" id="dh-ram">--%</span>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- ── CENTER: 3D Farm Scene + AI Output ──────── -->
-    <section class="center-col">
-
-      <!-- 3D Canvas -->
-      <div class="scene-container" id="sceneContainer">
-        <canvas id="farmCanvas"></canvas>
-
-        <!-- Overlay HUD -->
-        <div class="scene-hud">
-          <div class="hud-left">
-            <div class="hud-tag"><i class="fa-solid fa-location-dot"></i> Zone A — Main Field</div>
-            <div class="hud-tag dim"><i class="fa-solid fa-expand"></i> 2.4 ha · 6 sensor nodes</div>
-          </div>
-          <div class="hud-right">
-            <div class="hud-tag"><i class="fa-solid fa-camera"></i> Edge-AI Camera Active</div>
-            <div class="scene-controls-hint">
-              <i class="fa-solid fa-rotate"></i> Drag to rotate &nbsp;|&nbsp;
-              <i class="fa-solid fa-search-plus"></i> Scroll to zoom
-            </div>
-          </div>
-        </div>
-
-        <!-- Detection Overlay Badge -->
-        <div class="detection-overlay" id="detectionOverlay" style="display:none;">
-          <div class="det-icon" id="detIcon"><i class="fa-solid fa-bug"></i></div>
-          <div class="det-content">
-            <div class="det-title" id="detTitle">Pest Detected</div>
-            <div class="det-conf" id="detConf">Confidence: 93%</div>
-            <div class="det-model" id="detModel">Model: YOLOv8-nano</div>
-          </div>
-          <div class="det-close" onclick="closeDetection()"><i class="fa-solid fa-xmark"></i></div>
-        </div>
-      </div>
-
-      <!-- AI Inference Panel -->
-      <div class="ai-panel" id="aiPanel">
-        <div class="ai-panel-header">
-          <div class="ai-title">
-            <i class="fa-solid fa-brain"></i>
-            <span>Edge-AI Inference Engine</span>
-            <span class="badge badge-ai">MobileNetV3 + YOLOv8-nano</span>
-          </div>
-          <div class="ai-uptime"><i class="fa-solid fa-server"></i> RPi 4B · <span id="inferenceCount">0</span> inferences</div>
-        </div>
-
-        <div class="ai-outputs-grid">
-          <!-- Crop Health -->
-          <div class="ai-output-card" id="aoc-health">
-            <div class="aoc-icon green"><i class="fa-solid fa-leaf"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Crop Health Score</div>
-              <div class="aoc-value" id="aov-health">--</div>
-              <div class="aoc-sub" id="aos-health">Calculating...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-health" style="width:0%"></div></div>
-          </div>
-
-          <!-- Disease Detection -->
-          <div class="ai-output-card" id="aoc-disease">
-            <div class="aoc-icon blue"><i class="fa-solid fa-virus"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Disease Detection</div>
-              <div class="aoc-value" id="aov-disease">--</div>
-              <div class="aoc-sub" id="aos-disease">Scanning...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-disease" style="width:0%"></div></div>
-          </div>
-
-          <!-- Pest Detection -->
-          <div class="ai-output-card" id="aoc-pest">
-            <div class="aoc-icon orange"><i class="fa-solid fa-bug"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Pest Detection</div>
-              <div class="aoc-value" id="aov-pest">--</div>
-              <div class="aoc-sub" id="aos-pest">YOLOv8 scanning...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-pest" style="width:0%"></div></div>
-          </div>
-
-          <!-- Irrigation -->
-          <div class="ai-output-card" id="aoc-irrigation">
-            <div class="aoc-icon cyan"><i class="fa-solid fa-faucet-drip"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Irrigation Need</div>
-              <div class="aoc-value" id="aov-irrigation">--</div>
-              <div class="aoc-sub" id="aos-irrigation">Analysing moisture...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-irrigation" style="width:0%"></div></div>
-          </div>
-
-          <!-- Flood Risk -->
-          <div class="ai-output-card" id="aoc-flood">
-            <div class="aoc-icon purple"><i class="fa-solid fa-house-flood-water"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Flood Probability</div>
-              <div class="aoc-value" id="aov-flood">--</div>
-              <div class="aoc-sub" id="aos-flood">LSTM model running...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-flood" style="width:0%"></div></div>
-          </div>
-
-          <!-- Drought Risk -->
-          <div class="ai-output-card" id="aoc-drought">
-            <div class="aoc-icon red"><i class="fa-solid fa-sun-plant-wilt"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Drought Risk</div>
-              <div class="aoc-value" id="aov-drought">--</div>
-              <div class="aoc-sub" id="aos-drought">XGBoost running...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-drought" style="width:0%"></div></div>
-          </div>
-
-          <!-- Nutrient Deficiency -->
-          <div class="ai-output-card" id="aoc-nutrient">
-            <div class="aoc-icon yellow"><i class="fa-solid fa-atom"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Nutrient Deficiency</div>
-              <div class="aoc-value" id="aov-nutrient">--</div>
-              <div class="aoc-sub" id="aos-nutrient">Analysing NPK...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-nutrient" style="width:0%"></div></div>
-          </div>
-
-          <!-- Harvest Time -->
-          <div class="ai-output-card" id="aoc-harvest">
-            <div class="aoc-icon lime"><i class="fa-solid fa-tractor"></i></div>
-            <div class="aoc-body">
-              <div class="aoc-label">Harvest Readiness</div>
-              <div class="aoc-value" id="aov-harvest">--</div>
-              <div class="aoc-sub" id="aos-harvest">Predicting...</div>
-            </div>
-            <div class="aoc-conf-bar"><div class="aoc-conf-fill" id="acf-harvest" style="width:0%"></div></div>
-          </div>
-        </div>
-
-        <!-- Recommendation Strip -->
-        <div class="recommendation-strip" id="recommendationStrip">
-          <div class="rec-icon"><i class="fa-solid fa-lightbulb"></i></div>
-          <div class="rec-text" id="recText">Initialising AI model inference engine...</div>
-          <div class="rec-action-btns">
-            <button class="btn-act green" onclick="triggerIrrigationAction()"><i class="fa-solid fa-faucet-drip"></i> Irrigate</button>
-            <button class="btn-act orange" onclick="sendSMSAlert()"><i class="fa-solid fa-sms"></i> SMS Alert</button>
-            <button class="btn-act blue" onclick="logEvent()"><i class="fa-solid fa-database"></i> Log</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── RIGHT PANEL: Dashboard + Charts ──────── -->
-    <aside class="panel panel-right" id="rightPanel">
-      <div class="panel-header">
-        <i class="fa-solid fa-chart-line"></i>
-        <span>Live Analytics</span>
-        <span class="badge badge-live">LIVE</span>
-      </div>
-
-      <!-- Time-series charts -->
-      <div class="chart-wrap">
-        <div class="chart-title">Soil Moisture — 60 sec trend</div>
-        <canvas id="chartMoisture" height="70"></canvas>
-      </div>
-      <div class="chart-wrap">
-        <div class="chart-title">Air Temperature — 60 sec trend</div>
-        <canvas id="chartTemp" height="70"></canvas>
-      </div>
-      <div class="chart-wrap">
-        <div class="chart-title">AI Risk Score — 60 sec trend</div>
-        <canvas id="chartRisk" height="70"></canvas>
-      </div>
-
-      <!-- SDG Alignment -->
-      <div class="sdg-panel">
-        <div class="sdg-title"><i class="fa-solid fa-globe"></i> SDG Alignment</div>
-        <div class="sdg-chips">
-          <span class="sdg-chip sdg2">SDG 2<br/><small>Zero Hunger</small></span>
-          <span class="sdg-chip sdg6">SDG 6<br/><small>Clean Water</small></span>
-          <span class="sdg-chip sdg9">SDG 9<br/><small>Innovation</small></span>
-          <span class="sdg-chip sdg12">SDG 12<br/><small>Resp. Use</small></span>
-          <span class="sdg-chip sdg13">SDG 13<br/><small>Climate</small></span>
-        </div>
-      </div>
-
-      <!-- Connectivity Status -->
-      <div class="conn-panel">
-        <div class="conn-title"><i class="fa-solid fa-tower-broadcast"></i> Connectivity</div>
-        <div class="conn-items">
-          <div class="conn-item" id="ci-lora">
-            <span class="conn-dot green"></span>
-            <span>LoRaWAN</span>
-            <span class="conn-rssi" id="cr-lora">-87 dBm</span>
-          </div>
-          <div class="conn-item" id="ci-gsm">
-            <span class="conn-dot yellow"></span>
-            <span>GSM Fallback</span>
-            <span class="conn-rssi" id="cr-gsm">4G · -62 dBm</span>
-          </div>
-          <div class="conn-item" id="ci-sms">
-            <span class="conn-dot green"></span>
-            <span>SMS Gateway</span>
-            <span class="conn-rssi" id="cr-sms">Offline-first</span>
-          </div>
-          <div class="conn-item" id="ci-edge">
-            <span class="conn-dot green"></span>
-            <span>Edge Inference</span>
-            <span class="conn-rssi" id="cr-edge">No Cloud</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alert log -->
-      <div class="alert-log-panel">
-        <div class="alert-log-title"><i class="fa-solid fa-bell"></i> Alert Log</div>
-        <div class="alert-log-list" id="alertLogList">
-          <div class="alert-log-empty">No alerts yet. System monitoring...</div>
-        </div>
-      </div>
-    </aside>
-  </main>
-
-  <!-- ═══════════════════════════════════════════════
-       PROBLEM INJECTION PANEL (bottom drawer)
-  ═══════════════════════════════════════════════ -->
-  <div class="injection-bar" id="injectionBar">
-    <div class="inj-bar-header" onclick="toggleInjectionPanel()">
-      <div class="inj-bar-title">
-        <i class="fa-solid fa-syringe"></i>
-        <span>Problem Injection Panel</span>
-        <span class="badge badge-warn">SIMULATION CONTROL</span>
-      </div>
-      <i class="fa-solid fa-chevron-up" id="injChevron"></i>
-    </div>
-    <div class="inj-panel-content" id="injPanelContent">
-      <div class="inj-grid">
-
-        <!-- Crop Disease -->
-        <div class="inj-card">
-          <div class="inj-card-header disease">
-            <i class="fa-solid fa-virus"></i> Inject Disease
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-disease">
-              <option value="">-- Select Disease --</option>
-              <option value="blight">Late Blight</option>
-              <option value="rust">Wheat Rust</option>
-              <option value="smut">Loose Smut</option>
-              <option value="mildew">Powdery Mildew</option>
-              <option value="mosaic">Mosaic Virus</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Severity</label>
-              <input type="range" min="10" max="100" value="60" id="sev-disease" class="inj-slider" />
-              <span id="sev-disease-val">60%</span>
-            </div>
-            <button class="btn-inject red" onclick="injectProblem('disease')">
-              <i class="fa-solid fa-biohazard"></i> Inject
-            </button>
-          </div>
-        </div>
-
-        <!-- Pest Attack -->
-        <div class="inj-card">
-          <div class="inj-card-header pest">
-            <i class="fa-solid fa-bug"></i> Inject Pest
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-pest">
-              <option value="">-- Select Pest --</option>
-              <option value="aphids">Aphids</option>
-              <option value="stemBorer">Stem Borer</option>
-              <option value="whitefly">Whitefly</option>
-              <option value="locust">Desert Locust</option>
-              <option value="mite">Spider Mite</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Density</label>
-              <input type="range" min="10" max="100" value="70" id="sev-pest" class="inj-slider" />
-              <span id="sev-pest-val">70%</span>
-            </div>
-            <button class="btn-inject orange" onclick="injectProblem('pest')">
-              <i class="fa-solid fa-bug"></i> Inject
-            </button>
-          </div>
-        </div>
-
-        <!-- Nutrient Deficiency -->
-        <div class="inj-card">
-          <div class="inj-card-header nutrient">
-            <i class="fa-solid fa-atom"></i> Nutrient Deficiency
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-nutrient">
-              <option value="">-- Select Deficiency --</option>
-              <option value="nitrogen">Nitrogen (N)</option>
-              <option value="phosphorus">Phosphorus (P)</option>
-              <option value="potassium">Potassium (K)</option>
-              <option value="iron">Iron (Fe)</option>
-              <option value="zinc">Zinc (Zn)</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Deficit</label>
-              <input type="range" min="10" max="100" value="50" id="sev-nutrient" class="inj-slider" />
-              <span id="sev-nutrient-val">50%</span>
-            </div>
-            <button class="btn-inject yellow" onclick="injectProblem('nutrient')">
-              <i class="fa-solid fa-flask"></i> Inject
-            </button>
-          </div>
-        </div>
-
-        <!-- Drought -->
-        <div class="inj-card">
-          <div class="inj-card-header drought">
-            <i class="fa-solid fa-sun-plant-wilt"></i> Drought Stress
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-drought">
-              <option value="">-- Select Level --</option>
-              <option value="mild">Mild Drought</option>
-              <option value="moderate">Moderate Drought</option>
-              <option value="severe">Severe Drought</option>
-              <option value="extreme">Extreme Drought</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Duration</label>
-              <input type="range" min="1" max="30" value="7" id="sev-drought" class="inj-slider" />
-              <span id="sev-drought-val">7 days</span>
-            </div>
-            <button class="btn-inject brown" onclick="injectProblem('drought')">
-              <i class="fa-solid fa-fire-flame-curved"></i> Inject
-            </button>
-          </div>
-        </div>
-
-        <!-- Flood -->
-        <div class="inj-card">
-          <div class="inj-card-header flood">
-            <i class="fa-solid fa-house-flood-water"></i> Flood Event
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-flood">
-              <option value="">-- Select Type --</option>
-              <option value="flash">Flash Flood</option>
-              <option value="river">River Overflow</option>
-              <option value="waterlog">Waterlogging</option>
-              <option value="cyclone">Cyclone Rain</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Rainfall</label>
-              <input type="range" min="50" max="500" value="150" id="sev-flood" class="inj-slider" />
-              <span id="sev-flood-val">150 mm</span>
-            </div>
-            <button class="btn-inject blue" onclick="injectProblem('flood')">
-              <i class="fa-solid fa-water"></i> Inject
-            </button>
-          </div>
-        </div>
-
-        <!-- Heat Wave -->
-        <div class="inj-card">
-          <div class="inj-card-header heat">
-            <i class="fa-solid fa-temperature-arrow-up"></i> Heat Wave
-          </div>
-          <div class="inj-card-body">
-            <select class="inj-select" id="sel-heat">
-              <option value="">-- Select Intensity --</option>
-              <option value="warm">Warm Spell (35–38°C)</option>
-              <option value="hot">Heat Wave (38–43°C)</option>
-              <option value="extreme">Extreme Heat (43–48°C)</option>
-            </select>
-            <div class="inj-slider-row">
-              <label>Duration</label>
-              <input type="range" min="1" max="14" value="3" id="sev-heat" class="inj-slider" />
-              <span id="sev-heat-val">3 days</span>
-            </div>
-            <button class="btn-inject crimson" onclick="injectProblem('heat')">
-              <i class="fa-solid fa-fire"></i> Inject
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Injection Controls Row -->
-      <div class="inj-controls-row">
-        <button class="btn-inj-ctrl green" onclick="resetAllInjections()">
-          <i class="fa-solid fa-rotate-left"></i> Reset All
-        </button>
-        <button class="btn-inj-ctrl blue" onclick="runFullScenario()">
-          <i class="fa-solid fa-play"></i> Full Disaster Scenario
-        </button>
-        <button class="btn-inj-ctrl purple" onclick="runRandomScenario()">
-          <i class="fa-solid fa-shuffle"></i> Random Scenario
-        </button>
-        <div class="inj-active-tag" id="injActiveTag">No active injections</div>
+<!-- ══════════════════════════════════════════════════════
+     TOP NAVIGATION BAR (floating)
+══════════════════════════════════════════════════════ -->
+<header class="topbar glass">
+  <div class="topbar-left">
+    <div class="logo-wrap">
+      <div class="logo-icon"><i class="fa-solid fa-seedling"></i></div>
+      <div>
+        <div class="logo-main">Krishi Drishti</div>
+        <div class="logo-sub">AI Smart Farming · SIH 2026 · PS-26180</div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════
-       TOAST NOTIFICATION CONTAINER
-  ═══════════════════════════════════════════════ -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- ═══════════════════════════════════════════════
-       MODAL: SMS / Alert Sent
-  ═══════════════════════════════════════════════ -->
-  <div class="modal-overlay" id="modalOverlay" style="display:none;" onclick="closeModal()">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-icon" id="modalIcon"><i class="fa-solid fa-check-circle"></i></div>
-      <div class="modal-title" id="modalTitle">Action Triggered</div>
-      <div class="modal-body" id="modalBody"></div>
-      <button class="btn-modal-close" onclick="closeModal()">Close</button>
+  <div class="topbar-center">
+    <div class="system-status" id="systemStatus">
+      <span class="pulse-dot green"></span>
+      <span id="statusText">SYSTEM ONLINE · EDGE-AI ACTIVE</span>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════
-       FOOTER
-  ═══════════════════════════════════════════════ -->
-  <footer class="app-footer">
-    <span>Krishi Drishti © 2026 · Team SIH-26180 · Raunit, Nainsi, Nikhil, Aditya, Satwik, Sunny</span>
-    <span>Theme: Agriculture, FoodTech & Rural Development · Category: Hardware · Edge-AI on RPi 4B + ESP32</span>
-  </footer>
+  <div class="topbar-right">
+    <div class="kpi-item"><i class="fa-solid fa-wifi"></i><span id="connMode">LoRaWAN</span></div>
+    <div class="kpi-item"><i class="fa-solid fa-solar-panel"></i><span id="solarPct">87%</span></div>
+    <div class="kpi-item"><i class="fa-solid fa-clock"></i><span id="liveTime">--:--:--</span></div>
+    <div class="topbar-divider"></div>
+    <button class="btn-toggle-panel" onclick="togglePanel('left')" title="Sensors">
+      <i class="fa-solid fa-microchip"></i>
+    </button>
+    <button class="btn-toggle-panel" onclick="togglePanel('right')" title="Analytics">
+      <i class="fa-solid fa-chart-line"></i>
+    </button>
+    <button class="btn-toggle-panel active" onclick="togglePanel('ai')" title="AI Engine">
+      <i class="fa-solid fa-brain"></i>
+    </button>
+    <button class="btn-emergency" id="emergencyBtn" onclick="triggerEmergency()">
+      <i class="fa-solid fa-triangle-exclamation"></i> EMERGENCY
+    </button>
+  </div>
+</header>
 
-  <!-- ═══════════════════════════════════════════════
-       SCRIPTS (order matters)
-  ═══════════════════════════════════════════════ -->
-  <script src="js/sensors.js"></script>
-  <script src="js/ai-engine.js"></script>
-  <script src="js/alerts.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/farm.js"></script>
-  <script src="js/problem-injection.js"></script>
-  <script src="js/main.js"></script>
+<!-- ══════════════════════════════════════════════════════
+     LEFT FLOATING PANEL — Live Sensors
+══════════════════════════════════════════════════════ -->
+<aside class="float-panel panel-left glass" id="panelLeft">
+  <div class="fp-header">
+    <i class="fa-solid fa-microchip"></i>
+    <span>Live Sensor Array</span>
+    <span class="badge badge-live">LIVE</span>
+    <button class="fp-close" onclick="togglePanel('left')"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="fp-body">
+
+    <!-- SOIL -->
+    <div class="sensor-group">
+      <div class="sg-title"><i class="fa-solid fa-mound"></i> Soil</div>
+
+      <div class="sensor-card" id="sc-moisture">
+        <div class="sc-left">
+          <div class="sc-icon soil"><i class="fa-solid fa-droplet"></i></div>
+          <div>
+            <div class="sc-label">Moisture</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-moisture">--</span><span class="sc-unit">%</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-moisture">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-moisture"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-ph">
+        <div class="sc-left">
+          <div class="sc-icon soil"><i class="fa-solid fa-vial"></i></div>
+          <div>
+            <div class="sc-label">Soil pH</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-ph">--</span><span class="sc-unit">pH</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-ph">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-ph"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-temp">
+        <div class="sc-left">
+          <div class="sc-icon soil"><i class="fa-solid fa-temperature-half"></i></div>
+          <div>
+            <div class="sc-label">Soil Temp</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-stemp">--</span><span class="sc-unit">°C</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-stemp">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-stemp"></div></div>
+        </div>
+      </div>
+
+      <!-- NPK inline -->
+      <div class="npk-card" id="sc-npk">
+        <div class="npk-title"><i class="fa-solid fa-flask"></i> NPK Index</div>
+        <div class="npk-row">
+          <div class="npk-block n"><span class="npk-letter">N</span><span class="npk-val" id="val-n">--</span><span class="npk-unit">mg/kg</span></div>
+          <div class="npk-block p"><span class="npk-letter">P</span><span class="npk-val" id="val-p">--</span><span class="npk-unit">mg/kg</span></div>
+          <div class="npk-block k"><span class="npk-letter">K</span><span class="npk-val" id="val-k">--</span><span class="npk-unit">mg/kg</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATMOSPHERE -->
+    <div class="sensor-group">
+      <div class="sg-title"><i class="fa-solid fa-cloud-sun"></i> Atmosphere</div>
+
+      <div class="sensor-card" id="sc-atemp">
+        <div class="sc-left">
+          <div class="sc-icon atm"><i class="fa-solid fa-thermometer"></i></div>
+          <div>
+            <div class="sc-label">Air Temp</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-atemp">--</span><span class="sc-unit">°C</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-atemp">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-atemp"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-humidity">
+        <div class="sc-left">
+          <div class="sc-icon atm"><i class="fa-solid fa-water"></i></div>
+          <div>
+            <div class="sc-label">Humidity</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-humidity">--</span><span class="sc-unit">%RH</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-humidity">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-humidity"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-rain">
+        <div class="sc-left">
+          <div class="sc-icon atm"><i class="fa-solid fa-cloud-rain"></i></div>
+          <div>
+            <div class="sc-label">Rainfall</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-rain">--</span><span class="sc-unit">mm/h</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-rain">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-rain"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-light">
+        <div class="sc-left">
+          <div class="sc-icon atm"><i class="fa-solid fa-sun"></i></div>
+          <div>
+            <div class="sc-label">Light</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-light">--</span><span class="sc-unit">klux</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-light">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-light"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-wind">
+        <div class="sc-left">
+          <div class="sc-icon atm"><i class="fa-solid fa-wind"></i></div>
+          <div>
+            <div class="sc-label">Wind</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-wind">--</span><span class="sc-unit">km/h</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-wind">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-wind"></div></div>
+        </div>
+      </div>
+
+      <div class="sensor-card" id="sc-wlevel">
+        <div class="sc-left">
+          <div class="sc-icon water"><i class="fa-solid fa-ruler-vertical"></i></div>
+          <div>
+            <div class="sc-label">Canal Level</div>
+            <div class="sc-value-row"><span class="sc-value" id="val-wlevel">--</span><span class="sc-unit">m</span></div>
+          </div>
+        </div>
+        <div class="sc-right">
+          <span class="sc-badge ok" id="st-wlevel">OK</span>
+          <div class="sc-bar-wrap"><div class="sc-bar" id="bar-wlevel"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVICE -->
+    <div class="sensor-group">
+      <div class="sg-title"><i class="fa-solid fa-server"></i> Device Health</div>
+      <div class="dh-grid">
+        <div class="dh-card solar"><i class="fa-solid fa-solar-panel"></i><span id="dh-solar">--W</span><small>Solar</small></div>
+        <div class="dh-card battery"><i class="fa-solid fa-battery-three-quarters"></i><span id="dh-battery">--%</span><small>Battery</small></div>
+        <div class="dh-card cpu"><i class="fa-solid fa-microchip"></i><span id="dh-cpu">--%</span><small>CPU</small></div>
+        <div class="dh-card ram"><i class="fa-solid fa-memory"></i><span id="dh-ram">--%</span><small>RAM</small></div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════
+     RIGHT FLOATING PANEL — Analytics
+══════════════════════════════════════════════════════ -->
+<aside class="float-panel panel-right glass" id="panelRight">
+  <div class="fp-header">
+    <i class="fa-solid fa-chart-line"></i>
+    <span>Live Analytics</span>
+    <span class="badge badge-live">LIVE</span>
+    <button class="fp-close" onclick="togglePanel('right')"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="fp-body">
+
+    <div class="chart-block">
+      <div class="chart-label">Soil Moisture <span class="chart-unit">%</span></div>
+      <canvas id="chartMoisture" height="60"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-label">Air Temperature <span class="chart-unit">°C</span></div>
+      <canvas id="chartTemp" height="60"></canvas>
+    </div>
+    <div class="chart-block">
+      <div class="chart-label">AI Risk Score</div>
+      <canvas id="chartRisk" height="60"></canvas>
+    </div>
+
+    <!-- Connectivity -->
+    <div class="conn-block">
+      <div class="conn-block-title"><i class="fa-solid fa-tower-broadcast"></i> Connectivity</div>
+      <div class="conn-row"><span class="conn-dot green"></span><span>LoRaWAN</span><span id="cr-lora" class="conn-val">-87 dBm</span></div>
+      <div class="conn-row"><span class="conn-dot yellow"></span><span>GSM Fallback</span><span id="cr-gsm" class="conn-val">4G</span></div>
+      <div class="conn-row"><span class="conn-dot green"></span><span>SMS Gateway</span><span id="cr-sms" class="conn-val">Offline-first</span></div>
+      <div class="conn-row"><span class="conn-dot green"></span><span>Edge Inference</span><span id="cr-edge" class="conn-val">No Cloud</span></div>
+    </div>
+
+    <!-- SDG chips -->
+    <div class="sdg-block">
+      <div class="conn-block-title"><i class="fa-solid fa-globe"></i> SDG Alignment</div>
+      <div class="sdg-chips">
+        <span class="sdg-chip sdg2">SDG 2<br/><small>Zero Hunger</small></span>
+        <span class="sdg-chip sdg6">SDG 6<br/><small>Clean Water</small></span>
+        <span class="sdg-chip sdg9">SDG 9<br/><small>Innovation</small></span>
+        <span class="sdg-chip sdg12">SDG 12<br/><small>Resp. Use</small></span>
+        <span class="sdg-chip sdg13">SDG 13<br/><small>Climate</small></span>
+      </div>
+    </div>
+
+    <!-- Alert log -->
+    <div class="alert-log-block">
+      <div class="conn-block-title"><i class="fa-solid fa-bell"></i> Alert Log</div>
+      <div class="alert-log-list" id="alertLogList">
+        <div class="alert-log-empty">No alerts — monitoring...</div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════
+     BOTTOM PANEL — AI Engine (collapsible)
+══════════════════════════════════════════════════════ -->
+<div class="bottom-panel glass" id="panelAI">
+  <div class="bp-header" onclick="togglePanel('ai')">
+    <div class="bp-title">
+      <i class="fa-solid fa-brain"></i>
+      <span>Edge-AI Inference Engine</span>
+      <span class="badge badge-ai">MobileNetV3 · YOLOv8-nano · XGBoost · LSTM</span>
+      <span class="infer-count">RPi 4B · <span id="inferenceCount">0</span> inferences</span>
+    </div>
+    <i class="fa-solid fa-chevron-up" id="aiChevron"></i>
+  </div>
+
+  <div class="bp-body" id="bpBody">
+    <!-- AI output cards -->
+    <div class="ai-grid">
+
+      <div class="ai-card" id="aoc-health">
+        <div class="ai-card-icon green"><i class="fa-solid fa-leaf"></i></div>
+        <div class="ai-card-label">Crop Health</div>
+        <div class="ai-card-value" id="aov-health">--</div>
+        <div class="ai-card-sub" id="aos-health">Calculating...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar green" id="acf-health" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-disease">
+        <div class="ai-card-icon blue"><i class="fa-solid fa-virus"></i></div>
+        <div class="ai-card-label">Disease</div>
+        <div class="ai-card-value" id="aov-disease">--</div>
+        <div class="ai-card-sub" id="aos-disease">Scanning...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar blue" id="acf-disease" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-pest">
+        <div class="ai-card-icon orange"><i class="fa-solid fa-bug"></i></div>
+        <div class="ai-card-label">Pest</div>
+        <div class="ai-card-value" id="aov-pest">--</div>
+        <div class="ai-card-sub" id="aos-pest">YOLOv8...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar orange" id="acf-pest" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-irrigation">
+        <div class="ai-card-icon cyan"><i class="fa-solid fa-faucet-drip"></i></div>
+        <div class="ai-card-label">Irrigation</div>
+        <div class="ai-card-value" id="aov-irrigation">--</div>
+        <div class="ai-card-sub" id="aos-irrigation">Analysing...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar cyan" id="acf-irrigation" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-flood">
+        <div class="ai-card-icon purple"><i class="fa-solid fa-house-flood-water"></i></div>
+        <div class="ai-card-label">Flood Risk</div>
+        <div class="ai-card-value" id="aov-flood">--</div>
+        <div class="ai-card-sub" id="aos-flood">LSTM...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar purple" id="acf-flood" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-drought">
+        <div class="ai-card-icon red"><i class="fa-solid fa-sun-plant-wilt"></i></div>
+        <div class="ai-card-label">Drought</div>
+        <div class="ai-card-value" id="aov-drought">--</div>
+        <div class="ai-card-sub" id="aos-drought">XGBoost...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar red" id="acf-drought" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-nutrient">
+        <div class="ai-card-icon yellow"><i class="fa-solid fa-atom"></i></div>
+        <div class="ai-card-label">Nutrient</div>
+        <div class="ai-card-value" id="aov-nutrient">--</div>
+        <div class="ai-card-sub" id="aos-nutrient">NPK model...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar yellow" id="acf-nutrient" style="width:0%"></div></div>
+      </div>
+
+      <div class="ai-card" id="aoc-harvest">
+        <div class="ai-card-icon lime"><i class="fa-solid fa-tractor"></i></div>
+        <div class="ai-card-label">Harvest</div>
+        <div class="ai-card-value" id="aov-harvest">--</div>
+        <div class="ai-card-sub" id="aos-harvest">Predicting...</div>
+        <div class="ai-bar-wrap"><div class="ai-bar lime" id="acf-harvest" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Recommendation bar -->
+    <div class="rec-bar" id="recommendationStrip">
+      <i class="fa-solid fa-lightbulb rec-icon"></i>
+      <span class="rec-text" id="recText">Initialising AI inference engine...</span>
+      <div class="rec-actions">
+        <button class="rec-btn green" onclick="triggerIrrigationAction()"><i class="fa-solid fa-faucet-drip"></i> Irrigate</button>
+        <button class="rec-btn orange" onclick="sendSMSAlert()"><i class="fa-solid fa-sms"></i> SMS</button>
+        <button class="rec-btn blue" onclick="logEvent()"><i class="fa-solid fa-database"></i> Log</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     INJECTION DRAWER (slides up from bottom-right)
+══════════════════════════════════════════════════════ -->
+<div class="inj-fab-btn" onclick="toggleInjectionPanel()" title="Problem Injection">
+  <i class="fa-solid fa-syringe" id="injFabIcon"></i>
+  <span>Inject</span>
+</div>
+
+<div class="inj-drawer glass" id="injectionBar">
+  <div class="inj-drawer-header">
+    <div class="inj-drawer-title">
+      <i class="fa-solid fa-syringe"></i>
+      <span>Problem Injection Panel</span>
+      <span class="badge badge-warn">SIMULATION CONTROL</span>
+    </div>
+    <div class="inj-active-tag" id="injActiveTag">No active injections</div>
+    <button class="fp-close" onclick="toggleInjectionPanel()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <div class="inj-grid">
+
+    <div class="inj-card">
+      <div class="inj-card-hdr disease"><i class="fa-solid fa-virus"></i> Disease</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-disease">
+          <option value="">— Select —</option>
+          <option value="blight">Late Blight</option>
+          <option value="rust">Wheat Rust</option>
+          <option value="smut">Loose Smut</option>
+          <option value="mildew">Powdery Mildew</option>
+          <option value="mosaic">Mosaic Virus</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Severity</label>
+          <input type="range" min="10" max="100" value="60" id="sev-disease" class="inj-slider"/>
+          <span id="sev-disease-val">60%</span>
+        </div>
+        <button class="btn-inject red" onclick="injectProblem('disease')"><i class="fa-solid fa-biohazard"></i> Inject</button>
+      </div>
+    </div>
+
+    <div class="inj-card">
+      <div class="inj-card-hdr pest"><i class="fa-solid fa-bug"></i> Pest</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-pest">
+          <option value="">— Select —</option>
+          <option value="aphids">Aphids</option>
+          <option value="stemBorer">Stem Borer</option>
+          <option value="whitefly">Whitefly</option>
+          <option value="locust">Desert Locust</option>
+          <option value="mite">Spider Mite</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Density</label>
+          <input type="range" min="10" max="100" value="70" id="sev-pest" class="inj-slider"/>
+          <span id="sev-pest-val">70%</span>
+        </div>
+        <button class="btn-inject orange" onclick="injectProblem('pest')"><i class="fa-solid fa-bug"></i> Inject</button>
+      </div>
+    </div>
+
+    <div class="inj-card">
+      <div class="inj-card-hdr nutrient"><i class="fa-solid fa-atom"></i> Nutrient</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-nutrient">
+          <option value="">— Select —</option>
+          <option value="nitrogen">Nitrogen (N)</option>
+          <option value="phosphorus">Phosphorus (P)</option>
+          <option value="potassium">Potassium (K)</option>
+          <option value="iron">Iron (Fe)</option>
+          <option value="zinc">Zinc (Zn)</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Deficit</label>
+          <input type="range" min="10" max="100" value="50" id="sev-nutrient" class="inj-slider"/>
+          <span id="sev-nutrient-val">50%</span>
+        </div>
+        <button class="btn-inject yellow" onclick="injectProblem('nutrient')"><i class="fa-solid fa-flask"></i> Inject</button>
+      </div>
+    </div>
+
+    <div class="inj-card">
+      <div class="inj-card-hdr drought"><i class="fa-solid fa-sun-plant-wilt"></i> Drought</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-drought">
+          <option value="">— Select —</option>
+          <option value="mild">Mild</option>
+          <option value="moderate">Moderate</option>
+          <option value="severe">Severe</option>
+          <option value="extreme">Extreme</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Days</label>
+          <input type="range" min="1" max="30" value="7" id="sev-drought" class="inj-slider"/>
+          <span id="sev-drought-val">7 days</span>
+        </div>
+        <button class="btn-inject brown" onclick="injectProblem('drought')"><i class="fa-solid fa-fire-flame-curved"></i> Inject</button>
+      </div>
+    </div>
+
+    <div class="inj-card">
+      <div class="inj-card-hdr flood"><i class="fa-solid fa-house-flood-water"></i> Flood</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-flood">
+          <option value="">— Select —</option>
+          <option value="flash">Flash Flood</option>
+          <option value="river">River Overflow</option>
+          <option value="waterlog">Waterlogging</option>
+          <option value="cyclone">Cyclone Rain</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Rain</label>
+          <input type="range" min="50" max="500" value="150" id="sev-flood" class="inj-slider"/>
+          <span id="sev-flood-val">150 mm</span>
+        </div>
+        <button class="btn-inject blue" onclick="injectProblem('flood')"><i class="fa-solid fa-water"></i> Inject</button>
+      </div>
+    </div>
+
+    <div class="inj-card">
+      <div class="inj-card-hdr heat"><i class="fa-solid fa-temperature-arrow-up"></i> Heat Wave</div>
+      <div class="inj-card-body">
+        <select class="inj-select" id="sel-heat">
+          <option value="">— Select —</option>
+          <option value="warm">Warm (35–38°C)</option>
+          <option value="hot">Hot (38–43°C)</option>
+          <option value="extreme">Extreme (43–48°C)</option>
+        </select>
+        <div class="inj-slider-row">
+          <label>Days</label>
+          <input type="range" min="1" max="14" value="3" id="sev-heat" class="inj-slider"/>
+          <span id="sev-heat-val">3 days</span>
+        </div>
+        <button class="btn-inject crimson" onclick="injectProblem('heat')"><i class="fa-solid fa-fire"></i> Inject</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="inj-footer">
+    <button class="inj-ctrl-btn reset" onclick="resetAllInjections()"><i class="fa-solid fa-rotate-left"></i> Reset All</button>
+    <button class="inj-ctrl-btn disaster" onclick="runFullScenario()"><i class="fa-solid fa-play"></i> Full Disaster</button>
+    <button class="inj-ctrl-btn random" onclick="runRandomScenario()"><i class="fa-solid fa-shuffle"></i> Random</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TOAST CONTAINER
+══════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal()">
+  <div class="modal-box glass" onclick="event.stopPropagation()">
+    <div class="modal-icon" id="modalIcon"><i class="fa-solid fa-check-circle"></i></div>
+    <div class="modal-title" id="modalTitle">Action Triggered</div>
+    <div class="modal-body" id="modalBody"></div>
+    <button class="modal-close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════════════ -->
+<script src="js/sensors.js"></script>
+<script src="js/ai-engine.js"></script>
+<script src="js/alerts.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/farm.js"></script>
+<script src="js/problem-injection.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+/* Panel toggle controller */
+const panelState = { left: true, right: false, ai: true };
+
+function togglePanel(id) {
+  panelState[id] = !panelState[id];
+  const map = { left:'panelLeft', right:'panelRight', ai:'panelAI' };
+  const btn = document.querySelector(`.btn-toggle-panel[onclick="togglePanel('${id}')"]`);
+  const el  = document.getElementById(map[id]);
+  if (!el) return;
+  if (panelState[id]) {
+    el.classList.remove('hidden');
+    if (btn) btn.classList.add('active');
+  } else {
+    el.classList.add('hidden');
+    if (btn) btn.classList.remove('active');
+  }
+  /* Re-trigger farm resize */
+  setTimeout(() => {
+    const c = document.getElementById('sceneContainer');
+    if (c && typeof FarmScene !== 'undefined') {
+      window.dispatchEvent(new Event('resize'));
+    }
+  }, 320);
+}
+
+/* Open left by default, close right */
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('panelRight').classList.add('hidden');
+  document.querySelector(".btn-toggle-panel[onclick=\"togglePanel('right')\"]")?.classList.remove('active');
+});
+</script>
 </body>
 </html>
