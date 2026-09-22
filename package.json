@@ -1,0 +1,16 @@
+{
+  "name": "krishi-drishti",
+  "version": "1.0.0",
+  "description": "Krishi Drishti - AI-powered Smart Farming Assistant Simulation (SIH 2026 - PS 26180)",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx serve . -p 3000"
+  },
+  "keywords": ["smart-farming", "AI", "IoT", "edge-computing", "agriculture"],
+  "author": "Team Krishi Drishti",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
