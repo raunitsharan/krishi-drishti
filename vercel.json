@@ -1,9 +1,21 @@
 ﻿{
-  "cleanUrls": true,
-  "trailingSlash": false,
+  "version": 2,
+  "name": "krishi-drishti",
+  "builds": [
+    {
+      "src": "**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
   "headers": [
     {
-      "source": "/js/(.*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
