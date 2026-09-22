@@ -53,13 +53,8 @@ const FarmScene = (() => {
     dust:      0xd4a762,
   };
 
-  /* sky uniform colours — defined once, mutated later */
-  const SKY = {
-    top:     new THREE.Color(0x1565c0),
-    mid:     new THREE.Color(0x42a5f5),
-    bot:     new THREE.Color(0x87ceeb),
-    horizon: new THREE.Color(0xdceefb),
-  };
+  /* sky uniform colours — initialised lazily inside init() */
+  let SKY = null;
 
   /* ══════════════════════════════════════════════════════════
      INIT
@@ -83,6 +78,14 @@ const FarmScene = (() => {
     camera = new THREE.PerspectiveCamera(52, 1, 0.1, 300);
     clock  = new THREE.Clock();
 
+    /* Initialise SKY colours here — THREE is guaranteed loaded */
+    SKY = {
+      top:     new THREE.Color(0x1565c0),
+      mid:     new THREE.Color(0x42a5f5),
+      bot:     new THREE.Color(0x87ceeb),
+      horizon: new THREE.Color(0xdceefb),
+    };
+
     _buildLighting();
     _buildSkyDome();
     _buildSunDisc();
@@ -100,8 +103,8 @@ const FarmScene = (() => {
     _buildHarvestSparkles();
 
     _setupOrbit(canvas);
-    _setupResize(container);
-    _resize(container);
+    _setupResize();
+    _resize();
     _loop();
   }
 
@@ -637,15 +640,13 @@ const FarmScene = (() => {
   /* ══════════════════════════════════════════════════════════
      RESIZE
   ══════════════════════════════════════════════════════════ */
-  function _setupResize(container) {
-    const ro = new ResizeObserver(() => _resize(container));
-    ro.observe(container);
+  function _setupResize() {
+    window.addEventListener('resize', _resize);
   }
 
-  function _resize(container) {
-    const w = container.clientWidth  || container.offsetWidth  || 600;
-    const h = container.clientHeight || container.offsetHeight || 400;
-    if (w < 1 || h < 1) return;
+  function _resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();

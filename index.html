@@ -598,13 +598,8 @@ function togglePanel(id) {
     el.classList.add('hidden');
     if (btn) btn.classList.remove('active');
   }
-  /* Re-trigger farm resize */
-  setTimeout(() => {
-    const c = document.getElementById('sceneContainer');
-    if (c && typeof FarmScene !== 'undefined') {
-      window.dispatchEvent(new Event('resize'));
-    }
-  }, 320);
+  /* Re-trigger farm resize — canvas is fullscreen so just re-render */
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
 }
 
 /* Open left by default, close right */

@@ -36,6 +36,8 @@
   /* 3. Init 3D Scene */
   try {
     FarmScene.init();
+    /* Force resize after a frame so the canvas is fully painted */
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   } catch (e) {
     console.warn('[FarmScene] init error:', e);
   }
